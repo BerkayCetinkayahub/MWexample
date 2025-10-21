@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>MWexample.Wrapper</RootNamespace>
+    <AssemblyName>MWexample.Wrapper</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MWexample.Helper\MWexample.Helper.csproj" />
+  </ItemGroup>
+
+</Project>

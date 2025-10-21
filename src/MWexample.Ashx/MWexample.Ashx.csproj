@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>MWexample.Ashx</RootNamespace>
+    <AssemblyName>MWexample.Ashx</AssemblyName>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MWexample.Helper\MWexample.Helper.csproj" />
+    <ProjectReference Include="..\MWexample.Wrapper\MWexample.Wrapper.csproj" />
+  </ItemGroup>
+
+</Project>
