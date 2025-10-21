@@ -1,0 +1,14 @@
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+*.user
+*.suo
+*.userprefs
+.DS_Store
+.vs/
+packages/
+TestResults/
+*.log
+*.bak
