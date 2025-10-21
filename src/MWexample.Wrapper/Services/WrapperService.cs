@@ -48,6 +48,11 @@ public class BankingService
     /// Güncel döviz kurlarını saklayan liste
     /// </summary>
     private readonly List<ExchangeRate> _exchangeRates;
+    
+    /// <summary>
+    /// Günlük transfer limiti (TL cinsinden)
+    /// </summary>
+    private const decimal DailyTransferLimit = 50000m;
     #endregion
 
     #region Constructor
@@ -105,16 +110,33 @@ public class BankingService
             var toAccount = _accounts.FirstOrDefault(a => a.AccountId == request.ToAccountId);
 
             // Hesap varlık kontrolü
-            if (fromAccount == null || toAccount == null)
-                return new TransactionResult { Success = false, Message = "Hesap bulunamadı" };
+            if (fromAccount == null)
+                return new TransactionResult { Success = false, Message = "Kaynak hesap bulunamadı" };
+                
+            if (toAccount == null)
+                return new TransactionResult { Success = false, Message = "Hedef hesap bulunamadı" };
+                
+            // Aktif hesap kontrolü
+            if (!fromAccount.IsActive)
+                return new TransactionResult { Success = false, Message = "Kaynak hesap aktif değil" };
+                
+            if (!toAccount.IsActive)
+                return new TransactionResult { Success = false, Message = "Hedef hesap aktif değil" };
 
             // Transfer tutarı validasyonu
             if (!BankingUtility.ValidateTransferAmount(request.Amount))
-                return new TransactionResult { Success = false, Message = "Geçersiz transfer tutarı" };
+                return new TransactionResult { Success = false, Message = "Transfer tutarı 0.01 ile 1,000,000 arasında olmalıdır" };
 
             // Bakiye yeterlilik kontrolü
             if (!BankingUtility.ValidateAccountBalance(fromAccount.Balance, request.Amount))
-                return new TransactionResult { Success = false, Message = "Yetersiz bakiye" };
+                return new TransactionResult { Success = false, Message = $"Yetersiz bakiye. Mevcut: {fromAccount.Balance:N2} {BankingUtility.GetCurrencySymbol(fromAccount.Currency)}" };
+            
+            // Günlük transfer limiti kontrolü
+            var todayTransfers = GetTodayTransfersTotal(fromAccount.AccountId);
+            var amountInTRY = ConvertToTRY(request.Amount, fromAccount.Currency);
+            
+            if (todayTransfers + amountInTRY > DailyTransferLimit)
+                return new TransactionResult { Success = false, Message = $"Günlük transfer limitini aşıyorsunuz. Bugün: {todayTransfers:N2} ₺, Limit: {DailyTransferLimit:N2} ₺" };
 
             // Döviz kuru hesaplama
             decimal exchangeRate = 1;
@@ -189,6 +211,44 @@ public class BankingService
             r.FromCurrency == fromCurrency && r.ToCurrency == toCurrency);
         
         return rate?.Rate ?? 0;
+    }
+    
+    /// <summary>
+    /// Bugün yapılan transferlerin toplamını TL cinsinden hesaplar
+    /// </summary>
+    /// <param name="accountId">Hesap ID</param>
+    /// <returns>Bugün yapılan toplam transfer (TL)</returns>
+    private decimal GetTodayTransfersTotal(int accountId)
+    {
+        var today = DateTime.Today;
+        var todayTransactions = _transactions
+            .Where(t => t.FromAccountId == accountId 
+                    && t.TransactionDate.Date == today 
+                    && t.Status == TransactionStatus.Completed)
+            .ToList();
+        
+        decimal total = 0;
+        foreach (var transaction in todayTransactions)
+        {
+            total += ConvertToTRY(transaction.Amount, transaction.Currency);
+        }
+        
+        return total;
+    }
+    
+    /// <summary>
+    /// Herhangi bir para birimini TL'ye çevirir
+    /// </summary>
+    /// <param name="amount">Tutar</param>
+    /// <param name="currency">Para birimi</param>
+    /// <returns>TL karşılığı</returns>
+    private decimal ConvertToTRY(decimal amount, CurrencyType currency)
+    {
+        if (currency == CurrencyType.TRY)
+            return amount;
+            
+        var rate = GetExchangeRate(currency, CurrencyType.TRY);
+        return amount * rate;
     }
 
     /// <summary>

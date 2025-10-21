@@ -90,8 +90,17 @@ public static class BankingUtility
     /// <returns>Geçerli ise true, değilse false</returns>
     public static bool ValidateTransferAmount(decimal amount)
     {
-        // Tutar pozitif olmalı ve maksimum 1 milyon limitini aşmamalı
-        return amount > 0 && amount <= 1000000;
+        const decimal MinTransferAmount = 0.01m;
+        const decimal MaxTransferAmount = 1000000m;
+        
+        // Tutar minimum ve maksimum aralıkta olmalı
+        if (amount < MinTransferAmount)
+            return false;
+            
+        if (amount > MaxTransferAmount)
+            return false;
+            
+        return true;
     }
 
     /// <summary>
